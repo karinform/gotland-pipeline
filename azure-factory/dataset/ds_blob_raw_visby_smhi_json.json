@@ -1,0 +1,146 @@
+{
+	"name": "ds_blob_raw_visby_smhi_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_blob_sagotlandpipeline",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@concat('gotland_smhi', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
+					"type": "Expression"
+				},
+				"container": "raw"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"updated": {
+					"type": "integer"
+				},
+				"parameter": {
+					"type": "object",
+					"properties": {
+						"key": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string"
+						},
+						"summary": {
+							"type": "string"
+						},
+						"unit": {
+							"type": "string"
+						}
+					}
+				},
+				"station": {
+					"type": "object",
+					"properties": {
+						"key": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string"
+						},
+						"owner": {
+							"type": "string"
+						},
+						"ownerCategory": {
+							"type": "string"
+						},
+						"measuringStations": {
+							"type": "string"
+						},
+						"height": {
+							"type": "number"
+						}
+					}
+				},
+				"period": {
+					"type": "object",
+					"properties": {
+						"key": {
+							"type": "string"
+						},
+						"from": {
+							"type": "integer"
+						},
+						"to": {
+							"type": "integer"
+						},
+						"summary": {
+							"type": "string"
+						},
+						"sampling": {
+							"type": "string"
+						}
+					}
+				},
+				"position": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"from": {
+								"type": "integer"
+							},
+							"to": {
+								"type": "integer"
+							},
+							"height": {
+								"type": "number"
+							},
+							"latitude": {
+								"type": "number"
+							},
+							"longitude": {
+								"type": "number"
+							}
+						}
+					}
+				},
+				"link": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"href": {
+								"type": "string"
+							},
+							"rel": {
+								"type": "string"
+							},
+							"type": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"value": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"date": {
+								"type": "integer"
+							},
+							"value": {
+								"type": "string"
+							},
+							"quality": {
+								"type": "string"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

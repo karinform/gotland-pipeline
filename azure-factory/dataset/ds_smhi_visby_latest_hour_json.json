@@ -1,0 +1,15 @@
+{
+	"name": "ds_smhi_visby_latest_hour_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_smhi_rest",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": "/api/version/latest/parameter/7/station/78400/period/latest-hour/data.json"
+		},
+		"schema": []
+	}
+}
