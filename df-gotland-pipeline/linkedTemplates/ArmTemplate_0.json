@@ -1,0 +1,318 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "df-gotland-pipeline"
+		},
+		"ls_blob_sagotlandpipeline_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_blob_sagotlandpipeline'"
+		},
+		"ls_smhi_rest_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://opendata-download-metobs.smhi.se"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_smhi_rest')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_smhi_rest_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_blob_sagotlandpipeline')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_blob_sagotlandpipeline_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_smhi_visby_latest_hour_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_smhi_rest",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": "/api/version/latest/parameter/7/station/78400/period/latest-hour/data.json"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_smhi_rest')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_blob_raw_visby_smhi_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_blob_sagotlandpipeline",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@concat('gotland_smhi', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
+							"type": "Expression"
+						},
+						"container": "raw"
+					}
+				},
+				"schema": {
+					"type": "object",
+					"properties": {
+						"updated": {
+							"type": "integer"
+						},
+						"parameter": {
+							"type": "object",
+							"properties": {
+								"key": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"summary": {
+									"type": "string"
+								},
+								"unit": {
+									"type": "string"
+								}
+							}
+						},
+						"station": {
+							"type": "object",
+							"properties": {
+								"key": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"owner": {
+									"type": "string"
+								},
+								"ownerCategory": {
+									"type": "string"
+								},
+								"measuringStations": {
+									"type": "string"
+								},
+								"height": {
+									"type": "number"
+								}
+							}
+						},
+						"period": {
+							"type": "object",
+							"properties": {
+								"key": {
+									"type": "string"
+								},
+								"from": {
+									"type": "integer"
+								},
+								"to": {
+									"type": "integer"
+								},
+								"summary": {
+									"type": "string"
+								},
+								"sampling": {
+									"type": "string"
+								}
+							}
+						},
+						"position": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"from": {
+										"type": "integer"
+									},
+									"to": {
+										"type": "integer"
+									},
+									"height": {
+										"type": "number"
+									},
+									"latitude": {
+										"type": "number"
+									},
+									"longitude": {
+										"type": "number"
+									}
+								}
+							}
+						},
+						"link": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"href": {
+										"type": "string"
+									},
+									"rel": {
+										"type": "string"
+									},
+									"type": {
+										"type": "string"
+									}
+								}
+							}
+						},
+						"value": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"date": {
+										"type": "integer"
+									},
+									"value": {
+										"type": "string"
+									},
+									"quality": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_sagotlandpipeline')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_ingest_smhi_visby_hourly')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_SMHI_Visby_To_Raw_Blob",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_smhi_visby_latest_hour_json",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_blob_raw_visby_smhi_json",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_smhi_visby_latest_hour_json')]",
+				"[concat(variables('factoryId'), '/datasets/ds_blob_raw_visby_smhi_json')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trigger_gotland')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_ingest_smhi_visby_hourly",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 1,
+						"startTime": "2026-05-28T16:00:00",
+						"timeZone": "W. Europe Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_ingest_smhi_visby_hourly')]"
+			]
+		}
+	]
+}
