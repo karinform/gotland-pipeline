@@ -11,9 +11,25 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'ls_blob_sagotlandpipeline'"
 		},
+		"ls_snowflake_gotland_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_snowflake_gotland'"
+		},
+		"ls_blob_gotland_sas_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'ls_blob_gotland_sas'"
+		},
 		"ls_smhi_rest_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://opendata-download-metobs.smhi.se"
+		},
+		"ls_snowflake_gotland_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "GOTLAND_RAIN"
+		},
+		"ls_snowflake_gotland_properties_typeProperties_role": {
+			"type": "string",
+			"defaultValue": "SYSADMIN"
 		}
 	},
 	"variables": {
@@ -21,51 +37,163 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('factoryName'), '/ls_smhi_rest')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"name": "[concat(parameters('factoryName'), '/pl_ingest_smhi_visby_hourly')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"annotations": [],
-				"type": "RestService",
-				"typeProperties": {
-					"url": "[parameters('ls_smhi_rest_properties_typeProperties_url')]",
-					"enableServerCertificateValidation": true,
-					"authenticationType": "Anonymous"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_blob_sagotlandpipeline')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "AzureBlobStorage",
-				"typeProperties": {
-					"connectionString": "[parameters('ls_blob_sagotlandpipeline_connectionString')]"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_smhi_visby_latest_hour_json')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_smhi_rest",
-					"type": "LinkedServiceReference"
+				"activities": [
+					{
+						"name": "Copy_SMHI_Visby_To_Raw_Blob",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set_File_Name",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_smhi_visby_latest_hour_json",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_blob_raw_visby_smhi_json",
+								"type": "DatasetReference",
+								"parameters": {
+									"file_name": "@variables('file_name')"
+								}
+							}
+						]
+					},
+					{
+						"name": "Copy_Raw_Blob_To_Snowflake",
+						"type": "Copy",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"sink": {
+								"type": "SnowflakeV2Sink",
+								"importSettings": {
+									"type": "SnowflakeImportCopyCommand"
+								}
+							},
+							"enableStaging": true,
+							"stagingSettings": {
+								"linkedServiceName": {
+									"referenceName": "ls_blob_gotland_sas",
+									"type": "LinkedServiceReference"
+								},
+								"path": "staging/adf-snowflake/"
+							},
+							"translator": {
+								"type": "TabularTranslator",
+								"mapComplexValuesToString": true
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_blob_raw_visby_smhi_json",
+								"type": "DatasetReference",
+								"parameters": {
+									"file_name": "@variables('file_name')"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_snowflake_raw_visby_rainfall",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Set_File_Name",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "file_name",
+							"value": {
+								"value": "@concat('gotland_smhi_visby_', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
 				},
-				"annotations": [],
-				"type": "RestResource",
-				"typeProperties": {
-					"relativeUrl": "/api/version/latest/parameter/7/station/78400/period/latest-hour/data.json"
+				"variables": {
+					"file_name": {
+						"type": "String"
+					}
 				},
-				"schema": []
+				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_smhi_rest')]"
+				"[concat(variables('factoryId'), '/datasets/ds_smhi_visby_latest_hour_json')]",
+				"[concat(variables('factoryId'), '/datasets/ds_blob_raw_visby_smhi_json')]",
+				"[concat(variables('factoryId'), '/datasets/ds_snowflake_raw_visby_rainfall')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_gotland_sas')]"
 			]
 		},
 		{
@@ -77,13 +205,18 @@
 					"referenceName": "ls_blob_sagotlandpipeline",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"file_name": {
+						"type": "string"
+					}
+				},
 				"annotations": [],
 				"type": "Json",
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobStorageLocation",
 						"fileName": {
-							"value": "@concat('gotland_smhi', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
+							"value": "@dataset().file_name",
 							"type": "Expression"
 						},
 						"container": "raw"
@@ -220,69 +353,153 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pl_ingest_smhi_visby_hourly')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
+			"name": "[concat(parameters('factoryName'), '/ds_smhi_visby_latest_hour_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"activities": [
-					{
-						"name": "Copy_SMHI_Visby_To_Raw_Blob",
-						"type": "Copy",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "RestSource",
-								"httpRequestTimeout": "00:01:40",
-								"requestInterval": "00.00:00:00.010",
-								"requestMethod": "GET",
-								"paginationRules": {
-									"supportRFC5988": "true"
-								}
-							},
-							"sink": {
-								"type": "JsonSink",
-								"storeSettings": {
-									"type": "AzureBlobStorageWriteSettings"
-								},
-								"formatSettings": {
-									"type": "JsonWriteSettings"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_smhi_visby_latest_hour_json",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "ds_blob_raw_visby_smhi_json",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
+				"linkedServiceName": {
+					"referenceName": "ls_smhi_rest",
+					"type": "LinkedServiceReference"
 				},
-				"annotations": []
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": "/api/version/latest/parameter/7/station/78400/period/latest-hour/data.json"
+				},
+				"schema": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_smhi_visby_latest_hour_json')]",
-				"[concat(variables('factoryId'), '/datasets/ds_blob_raw_visby_smhi_json')]"
+				"[concat(variables('factoryId'), '/linkedServices/ls_smhi_rest')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_snowflake_raw_visby_rainfall')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake_gotland",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SnowflakeV2Table",
+				"schema": [
+					{
+						"name": "DATE",
+						"type": "TIMESTAMP_NTZ",
+						"precision": 0,
+						"scale": 9
+					},
+					{
+						"name": "VALUE",
+						"type": "FLOAT",
+						"precision": 0,
+						"scale": 0
+					},
+					{
+						"name": "QUALITY",
+						"type": "VARCHAR",
+						"precision": 0,
+						"scale": 0
+					},
+					{
+						"name": "STATION_ID",
+						"type": "VARCHAR",
+						"precision": 0,
+						"scale": 0
+					},
+					{
+						"name": "STATION_NAME",
+						"type": "VARCHAR",
+						"precision": 0,
+						"scale": 0
+					},
+					{
+						"name": "PARAMETER",
+						"type": "VARCHAR",
+						"precision": 0,
+						"scale": 0
+					},
+					{
+						"name": "UNIT",
+						"type": "VARCHAR",
+						"precision": 0,
+						"scale": 0
+					}
+				],
+				"typeProperties": {
+					"schema": "RAW",
+					"table": "VISBY_RAINFALL_JSON_RAW"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_snowflake_gotland')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_blob_gotland_sas')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": "[parameters('ls_blob_gotland_sas_sasUri')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_blob_sagotlandpipeline')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_blob_sagotlandpipeline_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_smhi_rest')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_smhi_rest_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_snowflake_gotland')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "SnowflakeV2",
+				"typeProperties": {
+					"authenticationType": "Basic",
+					"accountIdentifier": "xu08934.sweden-central.azure",
+					"user": "hida7",
+					"database": "[parameters('ls_snowflake_gotland_properties_typeProperties_database')]",
+					"warehouse": "COMPUTE_WH",
+					"role": "[parameters('ls_snowflake_gotland_properties_typeProperties_role')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_snowflake_gotland_password')]"
+					},
+					"useUtcTimestamps": false
+				},
+				"version": "1.1"
+			},
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/trigger_gotland')]",

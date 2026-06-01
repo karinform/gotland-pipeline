@@ -8,8 +8,20 @@
 		"ls_blob_sagotlandpipeline_connectionString": {
 			"value": ""
 		},
+		"ls_snowflake_gotland_password": {
+			"value": ""
+		},
+		"ls_blob_gotland_sas_sasUri": {
+			"value": ""
+		},
 		"ls_smhi_rest_properties_typeProperties_url": {
 			"value": "https://opendata-download-metobs.smhi.se"
+		},
+		"ls_snowflake_gotland_properties_typeProperties_database": {
+			"value": "GOTLAND_RAIN"
+		},
+		"ls_snowflake_gotland_properties_typeProperties_role": {
+			"value": "SYSADMIN"
 		},
 		"containerUri": {
 			"value": ""

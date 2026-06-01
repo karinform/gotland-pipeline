@@ -11,9 +11,25 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'ls_blob_sagotlandpipeline'"
 		},
+		"ls_snowflake_gotland_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_snowflake_gotland'"
+		},
+		"ls_blob_gotland_sas_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'ls_blob_gotland_sas'"
+		},
 		"ls_smhi_rest_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://opendata-download-metobs.smhi.se"
+		},
+		"ls_snowflake_gotland_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "GOTLAND_RAIN"
+		},
+		"ls_snowflake_gotland_properties_typeProperties_role": {
+			"type": "string",
+			"defaultValue": "SYSADMIN"
 		},
 		"containerUri": {
 			"type": "string",
@@ -45,8 +61,20 @@
 					"ls_blob_sagotlandpipeline_connectionString": {
 						"value": "[parameters('ls_blob_sagotlandpipeline_connectionString')]"
 					},
+					"ls_snowflake_gotland_password": {
+						"value": "[parameters('ls_snowflake_gotland_password')]"
+					},
+					"ls_blob_gotland_sas_sasUri": {
+						"value": "[parameters('ls_blob_gotland_sas_sasUri')]"
+					},
 					"ls_smhi_rest_properties_typeProperties_url": {
 						"value": "[parameters('ls_smhi_rest_properties_typeProperties_url')]"
+					},
+					"ls_snowflake_gotland_properties_typeProperties_database": {
+						"value": "[parameters('ls_snowflake_gotland_properties_typeProperties_database')]"
+					},
+					"ls_snowflake_gotland_properties_typeProperties_role": {
+						"value": "[parameters('ls_snowflake_gotland_properties_typeProperties_role')]"
 					}
 				}
 			},
