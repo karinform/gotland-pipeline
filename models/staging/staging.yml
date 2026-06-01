@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_smhi_visby_rainfall
+    description: "Silver staging model that flattens raw SMHI JSON rainfall data for Visby Flygplats into typed, queryable columns."
+    columns:
+      - name: station_id
+        description: "SMHI station ID. Visby Flygplats has station ID 78400."
+        tests:
+          - not_null
+
+      - name: station_name
+        description: "Name of the SMHI weather station."
+        tests:
+          - not_null
+
+      - name: observation_time
+        description: "Timestamp of the rainfall observation."
+        tests:
+          - not_null
+
+      - name: precipitation_mm
+        description: "Hourly precipitation amount in millimeters."
+        tests:
+          - not_null
