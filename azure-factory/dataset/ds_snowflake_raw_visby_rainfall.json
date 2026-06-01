@@ -1,0 +1,59 @@
+{
+	"name": "ds_snowflake_raw_visby_rainfall",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_snowflake_gotland",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SnowflakeV2Table",
+		"schema": [
+			{
+				"name": "DATE",
+				"type": "TIMESTAMP_NTZ",
+				"precision": 0,
+				"scale": 9
+			},
+			{
+				"name": "VALUE",
+				"type": "FLOAT",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "QUALITY",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "STATION_ID",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "STATION_NAME",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "PARAMETER",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "UNIT",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			}
+		],
+		"typeProperties": {
+			"schema": "RAW",
+			"table": "VISBY_RAINFALL_JSON_RAW"
+		}
+	}
+}
