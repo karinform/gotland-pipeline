@@ -5,15 +5,17 @@
 			"referenceName": "ls_blob_sagotlandpipeline",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"file_name": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "Json",
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobStorageLocation",
-				"fileName": {
-					"value": "@concat('gotland_smhi', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
-					"type": "Expression"
-				},
+				"fileName": "@dataset().file_name",
 				"container": "raw"
 			}
 		},

@@ -5,7 +5,14 @@
 			{
 				"name": "Copy_SMHI_Visby_To_Raw_Blob",
 				"type": "Copy",
-				"dependsOn": [],
+				"dependsOn": [
+					{
+						"activity": "Set_File_Name",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
 				"policy": {
 					"timeout": "0.12:00:00",
 					"retry": 0,
@@ -44,11 +51,94 @@
 				"outputs": [
 					{
 						"referenceName": "ds_blob_raw_visby_smhi_json",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "@variables('file_name')"
+						}
+					}
+				]
+			},
+			{
+				"name": "Copy_Raw_Blob_To_Snowflake",
+				"type": "Copy",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SnowflakeV2Sink",
+						"importSettings": {
+							"type": "SnowflakeImportCopyCommand"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ls_blob_gotland_sas",
+							"type": "LinkedServiceReference"
+						},
+						"path": "staging/adf-snowflake/"
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mapComplexValuesToString": true
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_blob_raw_visby_smhi_json",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "@variables('file_name')"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_snowflake_raw_visby_rainfall",
 						"type": "DatasetReference"
 					}
 				]
+			},
+			{
+				"name": "Set_File_Name",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "file_name",
+					"value": "@concat('gotland_smhi_visby_', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')"
+				}
 			}
 		],
+		"variables": {
+			"file_name": {
+				"type": "String"
+			}
+		},
 		"annotations": []
 	}
 }
