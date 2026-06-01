@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: raw
+    database: GOTLAND_RAIN_DB
+    schema: RAW
+    description: "Raw SMHI rainfall data loaded from Azure Blob Storage into Snowflake."
+    tables:
+      - name: RAW_SMHI_VISBY_RAINFALL
+        description: "Bronze table containing raw JSON responses from the SMHI API for Visby Flygplats."
+        columns:
+          - name: raw_data
+            description: "Original JSON response from the SMHI API stored as a Snowflake VARIANT column."
+          - name: source_file
+            description: "Name of the source JSON file loaded from Azure Blob Storage."
+          - name: loaded_at
+            description: "Timestamp when the JSON file was loaded into Snowflake."

@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: mart_visby_rainfall_hourly
+    description: "Gold mart table for hourly precipitation observations from Visby Flygplats, prepared for dashboarding and analysis."
+    columns:
+      - name: station_id
+        description: "SMHI station ID."
+        tests:
+          - not_null
+
+      - name: observation_time
+        description: "Timestamp of the rainfall observation."
+        tests:
+          - not_null
+
+      - name: precipitation_mm
+        description: "Hourly precipitation amount in millimeters."
+        tests:
+          - not_null
+
+      - name: rainfall_category
+        description: "Simple rainfall classification based on precipitation amount."
+
+      - name: heavy_rain_flag
+        description: "Boolean flag indicating whether an observation is classified as heavier rainfall."
