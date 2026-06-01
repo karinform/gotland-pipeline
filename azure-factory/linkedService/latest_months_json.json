@@ -1,0 +1,12 @@
+{
+	"name": "latest_months_json",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/7/station/78400/period/latest-months/data.json",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}
