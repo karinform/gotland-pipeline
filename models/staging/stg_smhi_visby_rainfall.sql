@@ -1,46 +1,29 @@
-with source as (
+WITH source AS (
 
-    select
+    SELECT
         raw_data,
         source_file,
         loaded_at
-    from {{ source('raw', 'RAW_SMHI_VISBY_RAINFALL') }}
+    FROM {{ source('raw', 'VISBY_RAINFALL_JSON_RAW') }}
 
 ),
 
-flattened as (
+parsed AS (
 
-    select
-        raw_data:station:key::string as station_id,
-        raw_data:station:name::string as station_name,
-        raw_data:parameter:key::string as parameter_id,
-        raw_data:parameter:name::string as parameter_name,
-        raw_data:parameter:unit::string as unit,
-
-        value_item.value:date::number as observation_timestamp_ms,
-        to_timestamp_ntz(value_item.value:date::number / 1000) as observation_time,
-
-        value_item.value:value::float as precipitation_mm,
-        value_item.value:quality::string as quality,
-
+    SELECT
+        raw_data:station.key::string AS station_id,
+        raw_data:station.name::string AS station_name,
+        raw_data:parameter.name::string AS parameter,
+        raw_data:parameter.unit::string AS unit,
+        TO_TIMESTAMP_NTZ(raw_data:value[0].date::number / 1000) AS observation_time,
+        raw_data:value[0].value::float AS precipitation_mm,
+        raw_data:value[0].quality::string AS quality,
         source_file,
         loaded_at
-
-    from source,
-    lateral flatten(input => raw_data:value) as value_item
+    FROM source
+    WHERE raw_data:station.key::string = '78400'
 
 )
 
-select
-    station_id,
-    station_name,
-    parameter_id,
-    parameter_name,
-    unit,
-    observation_timestamp_ms,
-    observation_time,
-    precipitation_mm,
-    quality,
-    source_file,
-    loaded_at
-from flattened
+SELECT *
+FROM parsed

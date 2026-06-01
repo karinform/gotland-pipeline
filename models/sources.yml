@@ -2,11 +2,11 @@ version: 2
 
 sources:
   - name: raw
-    database: GOTLAND_RAIN_DB
+    database: GOTLAND_RAIN
     schema: RAW
     description: "Raw SMHI rainfall data loaded from Azure Blob Storage into Snowflake."
     tables:
-      - name: RAW_SMHI_VISBY_RAINFALL
+      - name: VISBY_RAINFALL_JSON_RAW
         description: "Bronze table containing raw JSON responses from the SMHI API for Visby Flygplats."
         columns:
           - name: raw_data
