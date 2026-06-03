@@ -1,0 +1,12 @@
+{
+	"name": "ds_smhi_visby_latest_months_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "latest_months_json",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"schema": []
+	}
+}
