@@ -130,7 +130,44 @@
 				"userProperties": [],
 				"typeProperties": {
 					"variableName": "file_name",
-					"value": "@concat('gotland_smhi_visby_', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')"
+					"value": {
+						"value": "@concat('gotland_smhi_visby_', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Load_Blob_To_Snowflake",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Copy_SMHI_Visby_To_Raw_Blob",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake_gotland",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "COPY INTO GOTLAND_RAIN.RAW.VISBY_RAINFALL_JSON_RAW (raw_data, source_file)\nFROM (\n    SELECT\n        $1,\n        METADATA$FILENAME\n    FROM @GOTLAND_RAIN.RAW.AZURE_SMHI_VISBY_STAGE\n)\nFILE_FORMAT = GOTLAND_RAIN.RAW.JSON_FORMAT\nON_ERROR = 'CONTINUE';"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00",
+					"treatDecimalAsString": false
 				}
 			}
 		],
