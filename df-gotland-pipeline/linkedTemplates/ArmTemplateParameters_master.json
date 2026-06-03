@@ -11,6 +11,9 @@
 		"ls_snowflake_gotland_password": {
 			"value": ""
 		},
+		"latest_months_json_properties_typeProperties_url": {
+			"value": "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/7/station/78400/period/latest-months/data.json"
+		},
 		"ls_blob_gotland_sas_sasUri": {
 			"value": ""
 		},

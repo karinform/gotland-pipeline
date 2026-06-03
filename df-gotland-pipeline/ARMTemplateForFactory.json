@@ -15,6 +15,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'ls_snowflake_gotland'"
 		},
+		"latest_months_json_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/7/station/78400/period/latest-months/data.json"
+		},
 		"ls_blob_gotland_sas_sasUri": {
 			"type": "secureString",
 			"metadata": "Secure string for 'sasUri' of 'ls_blob_gotland_sas'"
@@ -36,6 +40,103 @@
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_backfill_smhi_visby_latest_months')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Backfill",
+				"activities": [
+					{
+						"name": "Set_Backfill_File_Name",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "file_name",
+							"value": {
+								"value": "@concat('backfill_smhi_visby_latest_months_', formatDateTime(utcNow(), 'yyyyMMdd_HHmmss'), '.json')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Copy_SMHI_Visby_Backfill_To_Raw_Blob",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set_Backfill_File_Name",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_smhi_visby_latest_months_json",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_blob_raw_visby_smhi_json",
+								"type": "DatasetReference",
+								"parameters": {
+									"file_name": "@variables('file_name')"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"file_name": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_smhi_visby_latest_months_json')]",
+				"[concat(variables('factoryId'), '/datasets/ds_blob_raw_visby_smhi_json')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_ingest_smhi_visby_hourly')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
@@ -177,6 +278,40 @@
 								"type": "Expression"
 							}
 						}
+					},
+					{
+						"name": "Load_Blob_To_Snowflake",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Copy_SMHI_Visby_To_Raw_Blob",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_snowflake_gotland",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": "COPY INTO GOTLAND_RAIN.RAW.VISBY_RAINFALL_JSON_RAW (raw_data, source_file)\nFROM (\n    SELECT\n        $1,\n        METADATA$FILENAME\n    FROM @GOTLAND_RAIN.RAW.AZURE_SMHI_VISBY_STAGE\n)\nFILE_FORMAT = GOTLAND_RAIN.RAW.JSON_FORMAT\nON_ERROR = 'CONTINUE';"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00",
+							"treatDecimalAsString": false
+						}
 					}
 				],
 				"policy": {
@@ -193,6 +328,7 @@
 				"[concat(variables('factoryId'), '/datasets/ds_smhi_visby_latest_hour_json')]",
 				"[concat(variables('factoryId'), '/datasets/ds_blob_raw_visby_smhi_json')]",
 				"[concat(variables('factoryId'), '/datasets/ds_snowflake_raw_visby_rainfall')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_snowflake_gotland')]",
 				"[concat(variables('factoryId'), '/linkedServices/ls_blob_gotland_sas')]"
 			]
 		},
@@ -373,6 +509,24 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/ds_smhi_visby_latest_months_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "latest_months_json",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/latest_months_json')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_snowflake_raw_visby_rainfall')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -435,6 +589,21 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_snowflake_gotland')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/latest_months_json')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('latest_months_json_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/ls_blob_gotland_sas')]",

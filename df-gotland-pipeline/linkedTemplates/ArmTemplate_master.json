@@ -15,6 +15,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'ls_snowflake_gotland'"
 		},
+		"latest_months_json_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/7/station/78400/period/latest-months/data.json"
+		},
 		"ls_blob_gotland_sas_sasUri": {
 			"type": "secureString",
 			"metadata": "Secure string for 'sasUri' of 'ls_blob_gotland_sas'"
@@ -63,6 +67,9 @@
 					},
 					"ls_snowflake_gotland_password": {
 						"value": "[parameters('ls_snowflake_gotland_password')]"
+					},
+					"latest_months_json_properties_typeProperties_url": {
+						"value": "[parameters('latest_months_json_properties_typeProperties_url')]"
 					},
 					"ls_blob_gotland_sas_sasUri": {
 						"value": "[parameters('ls_blob_gotland_sas_sasUri')]"
